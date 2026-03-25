@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Programa Visual 511 — Trelew</title>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, query, where, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCGifmN94dUdQgFWITW_qNc7FjdQYwwBT4",
+    authDomain: "programa-511-pbv.firebaseapp.com",
+    projectId: "programa-511-pbv",
+    storageBucket: "programa-511-pbv.firebasestorage.app",
+    messagingSenderId: "311229592586",
+    appId: "1:311229592586:web:db9838b9d9e47151dedbf3",
+    measurementId: "G-JYW0SW0EFZ"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  window._fb = { auth, db, signInWithEmailAndPassword, signOut, onAuthStateChanged,
+    collection, doc, setDoc, getDoc, getDocs, addDoc, query, where, orderBy, onSnapshot, serverTimestamp };
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg:#0a0f1e; --surface:#111827; --surface2:#1a2235; --border:#2a3a55;
+  --accent:#00d4ff; --accent2:#4ade80; --accent3:#f59e0b; --danger:#f87171; --purple:#a78bfa;
+  --text:#e8f0fe; --text2:#94a3b8; --text3:#64748b; --radius:12px; --shadow:0 4px 24px rgba(0,0,0,.5);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--accent),#0070ff);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.logo-text h1{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--accent);line-height:1.1;}
+.logo-text p{font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.user-badge{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--text2);display:none;}
+.user-badge.visible{display:block;}
+
+nav{background:var(--surface);border-bottom:1px solid var(--border);display:none;overflow-x:auto;scrollbar-width:none;}
+nav.visible{display:flex;}
+nav::-webkit-scrollbar{display:none;}
+.nav-btn{flex-shrink:0;padding:12px 16px;background:transparent;border:none;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.nav-btn.active,.nav-btn:hover{color:var(--accent);border-bottom-color:var(--accent);}
+
+main{padding:16px;max-width:860px;margin:0 auto;}
+.page{display:none;}.page.active{display:block;}
+
+#page-login{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 60px);padding:20px;}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px 24px;width:100%;max-width:380px;box-shadow:var(--shadow);}
+
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12px;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+.field input,.field textarea,.field select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;transition:border .2s;outline:none;}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1);}
+.field textarea{resize:vertical;min-height:90px;}
+.field select option{background:var(--surface2);}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 20px;border-radius:var(--radius);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;transition:all .2s;}
+.btn-primary{background:var(--accent);color:#000;width:100%;font-weight:600;}
+.btn-primary:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.btn-outline{background:transparent;color:var(--accent);border:1px solid var(--accent);}
+.btn-outline:hover{background:rgba(0,212,255,.08);}
+.btn-success{background:var(--accent2);color:#000;font-weight:600;}
+.btn-purple{background:var(--purple);color:#000;font-weight:600;}
+.btn-sm{padding:7px 14px;font-size:12px;}
+.btn-icon{padding:8px;border-radius:8px;}
+.accent{color:var(--accent);}
+
+.section-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;}
+.section-sub{color:var(--text2);font-size:13px;margin-bottom:20px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
+
+/* CALENDAR - más grande */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.cal-header h3{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;text-transform:capitalize;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.cal-day-name{text-align:center;font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:8px 0;font-weight:600;}
+.cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;cursor:pointer;font-size:16px;font-weight:500;border:1px solid transparent;transition:all .15s;position:relative;background:var(--surface2);}
+.cal-day:hover{border-color:var(--accent);color:var(--accent);}
+.cal-day.empty{background:transparent;cursor:default;}
+.cal-day.today{border-color:var(--accent);color:var(--accent);font-weight:700;}
+.cal-day.has-notes::after{content:'';width:6px;height:6px;background:var(--accent2);border-radius:50%;position:absolute;bottom:6px;}
+.cal-day.selected{background:var(--accent);color:#000!important;border-color:var(--accent);font-weight:700;}
+.cal-day.selected::after{background:#000;}
+
+.novedad-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;border-left:3px solid var(--accent);}
+.novedad-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.novedad-author{font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;}
+.novedad-time{font-size:11px;color:var(--text3);}
+.novedad-text{font-size:14px;line-height:1.6;white-space:pre-wrap;}
+
+.event-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;border-left:3px solid var(--purple);}
+.event-tag{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-bottom:8px;}
+.tag-urgente{background:rgba(248,113,113,.15);color:var(--danger);}
+.tag-informacion{background:rgba(167,139,250,.15);color:var(--purple);}
+.tag-seguimiento{background:rgba(245,158,11,.15);color:var(--accent3);}
+
+.escuela-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;border-left:3px solid var(--accent3);transition:border-color .2s;}
+.escuela-card:hover{border-left-color:var(--accent);}
+.escuela-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:8px;}
+.escuela-info{display:flex;flex-direction:column;gap:5px;}
+.escuela-row{display:flex;align-items:flex-start;gap:7px;font-size:13px;color:var(--text2);}
+.escuela-row .icon{color:var(--accent3);font-size:12px;margin-top:2px;flex-shrink:0;}
+
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:flex-end;justify-content:center;}
+.modal-overlay.visible{display:flex;}
+.modal-sheet{background:var(--surface);border-top-left-radius:20px;border-top-right-radius:20px;width:100%;max-width:800px;max-height:90vh;overflow-y:auto;padding:20px 20px 30px;animation:slideUp .3s ease;}
+@keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;}
+.modal-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:4px;}
+.modal-sub{font-size:12px;color:var(--text2);margin-bottom:20px;}
+
+.alert{padding:12px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:14px;display:none;}
+.alert.visible{display:block;}
+.alert-error{background:rgba(248,113,113,.1);border:1px solid var(--danger);color:var(--danger);}
+
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.badge-blue{background:rgba(0,212,255,.15);color:var(--accent);}
+.badge-green{background:rgba(74,222,128,.15);color:var(--accent2);}
+.badge-yellow{background:rgba(245,158,11,.15);color:var(--accent3);}
+
+.search-box{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;}
+.search-box input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;}
+
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3);}
+.empty-state .icon{font-size:36px;margin-bottom:10px;}
+.empty-state p{font-size:14px;}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin:20px auto;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.day-header{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;}
+.day-header .date-big{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--accent);}
+.day-header .date-small{font-size:12px;color:var(--text2);}
+
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;}
+.stat-num{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--accent);}
+.stat-label{font-size:11px;color:var(--text2);margin-top:2px;}
+
+.filter-row{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;scrollbar-width:none;}
+.filter-row::-webkit-scrollbar{display:none;}
+.filter-btn{flex-shrink:0;padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.filter-btn.active{background:var(--accent);color:#000;border-color:var(--accent);}
+
+.bottom-tab{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:95;}
+.bottom-tab.visible{display:flex;}
+.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 14px;background:transparent;border:none;color:var(--text3);font-family:'DM Sans',sans-serif;font-size:10px;gap:3px;cursor:pointer;transition:color .2s;}
+.tab-btn .icon{font-size:18px;}
+.tab-btn.active{color:var(--accent);}
+.pb-tab{padding-bottom:72px;}
+
+@media(max-width:400px){.cal-day{font-size:13px;}main{padding:10px;}.stats-row{gap:6px;}.stat-num{font-size:20px;}}
+
+/* HISTORIAL */
+.hist-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;}
+.hist-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.hist-agrego{background:rgba(74,222,128,.15);}
+.hist-modifico{background:rgba(0,212,255,.15);}
+.hist-elimino{background:rgba(248,113,113,.15);}
+.hist-body{flex:1;min-width:0;}
+.hist-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;gap:8px;}
+.hist-user{font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap;}
+.hist-time{font-size:10px;color:var(--text3);white-space:nowrap;}
+.hist-desc{font-size:13px;color:var(--text2);line-height:1.5;word-break:break-word;}
+.hist-seccion{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text3);margin-top:4px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">👁️</div>
+    <div class="logo-text">
+      <h1>Visual 511</h1>
+      <p>Trelew · Prev. Visual</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="user-badge" id="userBadge"></span>
+    <button class="btn btn-outline btn-sm" id="btnLogout" style="display:none" onclick="doLogout()">Salir</button>
+  </div>
+</header>
+
+<nav id="mainNav">
+  <button class="nav-btn active" onclick="showPage('calendario')" data-page="calendario">📅 Calendario</button>
+  <button class="nav-btn" onclick="showPage('eventualidades')" data-page="eventualidades">⚠️ Eventualidades</button>
+  <button class="nav-btn" onclick="showPage('escuelas')" data-page="escuelas">🏫 Escuelas</button>
+  <button class="nav-btn" onclick="showPage('personal')" data-page="personal">👥 Personal</button>
+  <button class="nav-btn" onclick="showPage('historial')" data-page="historial">🕓 Historial</button>
+</nav>
+
+<main>
+
+<!-- LOGIN -->
+<div id="page-login" class="page active">
+  <div style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 60px);padding:20px;">
+    <div class="login-card">
+      <div style="text-align:center;font-size:48px;margin-bottom:8px;">👁️</div>
+      <h2 style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;text-align:center;margin-bottom:4px;">Programa <span class="accent">511</span></h2>
+      <p style="text-align:center;color:var(--text2);font-size:13px;margin-bottom:28px;">Prevención y Detección Visual · Trelew</p>
+      <div id="loginAlert" class="alert alert-error"></div>
+      <div class="field"><label>Correo electrónico</label><input type="email" id="loginEmail" placeholder="nombre@institución.edu.ar"></div>
+      <div class="field"><label>Contraseña</label><input type="password" id="loginPass" placeholder="••••••••" onkeypress="if(event.key==='Enter')doLogin()"></div>
+      <button class="btn btn-primary" onclick="doLogin()" id="btnLogin">Ingresar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CALENDARIO -->
+<div id="page-calendario" class="page pb-tab">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div><div class="section-title">📅 Calendario</div><div class="section-sub">Novedades diarias del programa</div></div>
+  </div>
+  <div class="card">
+    <div class="cal-header">
+      <h3 id="calMonthTitle"></h3>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline btn-icon btn-sm" onclick="changeMonth(-1)">‹</button>
+        <button class="btn btn-outline btn-icon btn-sm" onclick="changeMonth(1)">›</button>
+      </div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+  <div id="daySection" style="display:none;">
+    <div class="day-header">
+      <div><div class="date-big" id="dayTitle"></div><div class="date-small" id="daySubtitle"></div></div>
+      <button class="btn btn-success btn-sm" onclick="openNovModal()">+ Novedad</button>
+    </div>
+    <div id="novedadesContainer"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- EVENTUALIDADES -->
+<div id="page-eventualidades" class="page pb-tab">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div><div class="section-title">⚠️ Eventualidades</div><div class="section-sub">Situaciones importantes del equipo</div></div>
+    <button class="btn btn-purple btn-sm" onclick="openEventModal()">+ Cargar</button>
+  </div>
+  <div class="filter-row">
+    <button class="filter-btn active" id="fevTodos" onclick="filtrarEv('todos')">Todas</button>
+    <button class="filter-btn" id="fevUrgente" onclick="filtrarEv('urgente')">🔴 Urgente</button>
+    <button class="filter-btn" id="fevInfo" onclick="filtrarEv('informacion')">🟣 Novedades</button>
+    <button class="filter-btn" id="fevSeg" onclick="filtrarEv('seguimiento')">🟡 Seguimiento</button>
+  </div>
+  <div id="eventualidadesContainer"><div class="spinner"></div></div>
+</div>
+
+<!-- ESCUELAS -->
+<div id="page-escuelas" class="page pb-tab">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div><div class="section-title">🏫 Escuelas</div><div class="section-sub">Base de datos · Trelew</div></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-outline btn-sm" onclick="exportarPDF()">📄 PDF</button>
+      <button class="btn btn-success btn-sm" onclick="openEscuelaModal()">+ Nueva</button>
+    </div>
+  </div>
+  <div class="stats-row" id="escuelasStats"></div>
+  <div class="search-box"><span>🔍</span><input type="text" id="escuelaSearch" placeholder="Buscar escuela..." oninput="filterEscuelas()"></div>
+  <div class="filter-row">
+    <button class="filter-btn active" id="fescTodas" onclick="setFiltroEsc('todas')">Todas</button>
+    <button class="filter-btn" id="fescPend" onclick="setFiltroEsc('pendiente')">⏳ Pendientes</button>
+    <button class="filter-btn" id="fescVisit" onclick="setFiltroEsc('visitada')">✅ Visitadas</button>
+    <button class="filter-btn" id="fescProg" onclick="setFiltroEsc('programada')">📅 Programadas</button>
+  </div>
+  <div id="escuelasContainer"><div class="spinner"></div></div>
+</div>
+
+<!-- PERSONAL -->
+<div id="page-personal" class="page pb-tab">
+  <div class="section-title">👥 Personal</div>
+  <div class="section-sub">Equipo del programa</div>
+  <div id="personalContainer"><div class="spinner"></div></div>
+</div>
+
+<!-- HISTORIAL -->
+<div id="page-historial" class="page pb-tab">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div><div class="section-title">🕓 Historial</div><div class="section-sub">Registro de todas las modificaciones</div></div>
+  </div>
+  <div class="filter-row">
+    <button class="filter-btn active" id="fhTodos" onclick="filtrarHistorial('todos')">Todos</button>
+    <button class="filter-btn" id="fhAgrego" onclick="filtrarHistorial('agrego')">➕ Agregó</button>
+    <button class="filter-btn" id="fhModifico" onclick="filtrarHistorial('modifico')">✏️ Modificó</button>
+    <button class="filter-btn" id="fhElimino" onclick="filtrarHistorial('elimino')">🗑️ Eliminó</button>
+  </div>
+  <div class="search-box"><span>🔍</span><input type="text" id="historialSearch" placeholder="Buscar por usuario o descripción..." oninput="buscarHistorial()"></div>
+  <div id="historialContainer"><div class="spinner"></div></div>
+</div>
+
+</main>
+
+<div class="bottom-tab" id="bottomTab">
+  <button class="tab-btn active" onclick="showPage('calendario')" data-tab="calendario"><span class="icon">📅</span>Calendario</button>
+  <button class="tab-btn" onclick="showPage('eventualidades')" data-tab="eventualidades"><span class="icon">⚠️</span>Eventos</button>
+  <button class="tab-btn" onclick="showPage('escuelas')" data-tab="escuelas"><span class="icon">🏫</span>Escuelas</button>
+  <button class="tab-btn" onclick="showPage('personal')" data-tab="personal"><span class="icon">👥</span>Personal</button>
+  <button class="tab-btn" onclick="showPage('historial')" data-tab="historial"><span class="icon">🕓</span>Historial</button>
+</div>
+
+<!-- MODAL NOVEDAD -->
+<div class="modal-overlay" id="novModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📝 Nueva Novedad</div>
+    <div class="modal-sub" id="novModalSub"></div>
+    <div id="novAlert" class="alert alert-error"></div>
+    <div class="field"><label>Escuela / Actividad</label><input type="text" id="novEscuela" placeholder="Ej: Jardín N°5 Los Girasoles"></div>
+    <div class="field"><label>Detalle de la novedad</label><textarea id="novTexto" placeholder="Describí las actividades realizadas, observaciones, cantidad de niños evaluados..."></textarea></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-outline" style="flex:1" onclick="closeNovModal()">Cancelar</button>
+      <button class="btn btn-primary" style="flex:2" onclick="saveNovedad()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EVENTUALIDAD -->
+<div class="modal-overlay" id="eventModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚠️ Nueva Eventualidad</div>
+    <div class="modal-sub">Registrá una situación importante para el equipo</div>
+    <div id="eventAlert" class="alert alert-error"></div>
+    <div class="field"><label>Tipo</label>
+      <select id="eventTipo">
+        <option value="urgente">🔴 Urgente</option>
+        <option value="informacion">🟣 Novedades</option>
+        <option value="seguimiento" selected>🟡 Requiere seguimiento</option>
+      </select>
+    </div>
+    <div class="field"><label>Escuela relacionada (opcional)</label><input type="text" id="eventEscuela" placeholder="Ej: Jardín N°5"></div>
+    <div class="field"><label>Descripción</label><textarea id="eventTexto" placeholder="Describí qué ocurrió, qué medidas se tomaron o qué requiere atención..."></textarea></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-outline" style="flex:1" onclick="closeEventModal()">Cancelar</button>
+      <button class="btn btn-purple" style="flex:2" onclick="saveEventualidad()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ESCUELA -->
+<div class="modal-overlay" id="escuelaModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🏫 Nueva Escuela</div>
+    <div class="modal-sub">Agregar institución a la base de datos</div>
+    <div id="escAlert" class="alert alert-error"></div>
+    <div class="field"><label>Nombre de la escuela *</label><input type="text" id="escNombre" placeholder="Ej: Jardín N°5 Los Girasoles"></div>
+    <div class="field"><label>Directivo / Responsable</label><input type="text" id="escDirectivo" placeholder="Nombre y apellido"></div>
+    <div class="field"><label>Teléfono</label><input type="tel" id="escTelefono" placeholder="(0280) 15-000-0000"></div>
+    <div class="field"><label>Correo electrónico</label><input type="email" id="escMail" placeholder="escuela@trelew.edu.ar"></div>
+    <div class="field"><label>Dirección</label><input type="text" id="escDireccion" placeholder="Calle y número"></div>
+    <div class="field"><label>Cantidad de alumnos (4-6 años)</label><input type="number" id="escAlumnos" placeholder="0" min="0"></div>
+    <div class="field"><label>Estado</label>
+      <select id="escEstado">
+        <option value="pendiente">⏳ Pendiente de visita</option>
+        <option value="visitada">✅ Visitada</option>
+        <option value="programada">📅 Visita programada</option>
+      </select>
+    </div>
+    <div class="field"><label>Fecha de visita</label><input type="date" id="escFechaVisita"></div>
+    <div class="field"><label>Observaciones</label><textarea id="escObservaciones" placeholder="Observaciones generales..."></textarea></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-outline" style="flex:1" onclick="closeEscuelaModal()">Cancelar</button>
+      <button class="btn btn-primary" style="flex:2" onclick="saveEscuela()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentUser=null, currentUserData=null, selectedDate=null;
+let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
+let daysWithNotes=new Set(), allEscuelas=[], allEventualidades=[], allHistorial=[];
+let filtroEscuela='todas', filtroEv='todos', filtroHist='todos';
+let unsubNov=null, unsubEv=null, unsubHist=null;
+
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const DIAS_FULL=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+
+function fb(){return window._fb;}
+
+// ── AUTH ──
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const alertEl=document.getElementById('loginAlert');
+  const btn=document.getElementById('btnLogin');
+  if(!email||!pass){showAlert(alertEl,'Completá todos los campos.');return;}
+  btn.textContent='...';btn.disabled=true;hideAlert(alertEl);
+  try{
+    const{auth,signInWithEmailAndPassword}=fb();
+    await signInWithEmailAndPassword(auth,email,pass);
+  }catch(e){btn.textContent='Ingresar';btn.disabled=false;showAlert(alertEl,'Usuario o contraseña incorrectos.');}
+}
+
+async function doLogout(){
+  const{auth,signOut}=fb();
+  await signOut(auth);
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  const{auth,onAuthStateChanged}=fb();
+  onAuthStateChanged(auth,async user=>{
+    if(user){currentUser=user;await loadUserData(user.uid);onLogin();}
+    else{currentUser=null;currentUserData=null;onLogout();}
+  });
+});
+
+async function loadUserData(uid){
+  try{
+    const{db,doc,getDoc}=fb();
+    const snap=await getDoc(doc(db,'personal',uid));
+    currentUserData=snap.exists()?snap.data():{nombre:currentUser.email.split('@')[0],rol:'Personal'};
+  }catch(e){currentUserData={nombre:currentUser.email.split('@')[0],rol:'Personal'};}
+}
+
+function onLogin(){
+  // Ocultar completamente la pantalla de login
+  const lp=document.getElementById('page-login');
+  lp.classList.remove('active');
+  lp.style.display='none';
+
+  document.getElementById('userBadge').textContent='👤 '+(currentUserData?.nombre||'');
+  document.getElementById('userBadge').classList.add('visible');
+  document.getElementById('btnLogout').style.display='block';
+  document.getElementById('mainNav').classList.add('visible');
+  document.getElementById('bottomTab').classList.add('visible');
+  showPage('calendario');
+  loadEscuelas();loadPersonal();loadEventualidades();loadHistorial();
+}
+
+function onLogout(){
+  const lp=document.getElementById('page-login');
+  lp.style.display='';lp.classList.add('active');
+  document.querySelectorAll('.page:not(#page-login)').forEach(p=>p.classList.remove('active'));
+  document.getElementById('userBadge').classList.remove('visible');
+  document.getElementById('btnLogout').style.display='none';
+  document.getElementById('mainNav').classList.remove('visible');
+  document.getElementById('bottomTab').classList.remove('visible');
+  document.getElementById('btnLogin').textContent='Ingresar';
+  document.getElementById('btnLogin').disabled=false;
+  if(unsubNov){unsubNov();unsubNov=null;}
+  if(unsubEv){unsubEv();unsubEv=null;}
+  if(unsubHist){unsubHist();unsubHist=null;}
+}
+
+// ── NAV ──
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const pg=document.getElementById('page-'+name);
+  if(pg){pg.classList.add('active');pg.style.display='';}
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===name));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));
+  if(name==='calendario')renderCalendar();
+  if(name==='historial')loadHistorial();
+}
+
+// ── CALENDAR ──
+async function renderCalendar(){
+  document.getElementById('calMonthTitle').textContent=`${MESES[calMonth]} ${calYear}`;
+  const grid=document.getElementById('calGrid');
+  let html=DIAS.map(d=>`<div class="cal-day-name">${d}</div>`).join('');
+  const firstDay=new Date(calYear,calMonth,1).getDay();
+  const totalDays=new Date(calYear,calMonth+1,0).getDate();
+  const today=new Date();
+  await loadDaysWithNotes();
+  for(let i=0;i<firstDay;i++)html+='<div class="cal-day empty"></div>';
+  for(let d=1;d<=totalDays;d++){
+    const dk=dateToKey(calYear,calMonth,d);
+    const isToday=today.getFullYear()===calYear&&today.getMonth()===calMonth&&today.getDate()===d;
+    const isSel=selectedDate===dk;
+    const hasN=daysWithNotes.has(dk);
+    let cls='cal-day';
+    if(isToday)cls+=' today';
+    if(isSel)cls+=' selected';
+    if(hasN)cls+=' has-notes';
+    html+=`<div class="${cls}" onclick="selectDay(${d})">${d}</div>`;
+  }
+  grid.innerHTML=html;
+}
+
+async function loadDaysWithNotes(){
+  try{
+    const{db,collection,query,where,getDocs}=fb();
+    const start=dateToKey(calYear,calMonth,1),end=dateToKey(calYear,calMonth,31);
+    const q=query(collection(db,'novedades'),where('fecha','>=',start),where('fecha','<=',end));
+    const snaps=await getDocs(q);
+    daysWithNotes.clear();
+    snaps.forEach(s=>daysWithNotes.add(s.data().fecha));
+  }catch(e){}
+}
+
+function changeMonth(delta){
+  calMonth+=delta;
+  if(calMonth>11){calMonth=0;calYear++;}
+  if(calMonth<0){calMonth=11;calYear--;}
+  selectedDate=null;
+  document.getElementById('daySection').style.display='none';
+  renderCalendar();
+}
+
+function selectDay(d){
+  selectedDate=dateToKey(calYear,calMonth,d);
+  renderCalendar();
+  const date=new Date(calYear,calMonth,d);
+  document.getElementById('dayTitle').textContent=`${d} de ${MESES[calMonth]}`;
+  document.getElementById('daySubtitle').textContent=`${DIAS_FULL[date.getDay()].charAt(0).toUpperCase()+DIAS_FULL[date.getDay()].slice(1)} · ${calYear}`;
+  document.getElementById('daySection').style.display='block';
+  loadNovedades();
+}
+
+// ── NOVEDADES ──
+function loadNovedades(){
+  if(!selectedDate)return;
+  if(unsubNov){unsubNov();unsubNov=null;}
+  const{db,collection,query,where,orderBy,onSnapshot}=fb();
+  const container=document.getElementById('novedadesContainer');
+  container.innerHTML='<div class="spinner"></div>';
+  try{
+    const q=query(collection(db,'novedades'),where('fecha','==',selectedDate),orderBy('creadoEn','asc'));
+    unsubNov=onSnapshot(q,snap=>{
+      if(snap.empty){container.innerHTML=`<div class="empty-state"><div class="icon">📋</div><p>Sin novedades para este día.<br>¡Cargá la primera!</p></div>`;return;}
+      container.innerHTML=snap.docs.map(d=>{
+        const data=d.data();
+        const hora=data.creadoEn?.toDate?.()?.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})||'';
+        return`<div class="novedad-item">
+          <div class="novedad-header"><span class="novedad-author">👤 ${esc(data.autorNombre||'Anónimo')}</span><span class="novedad-time">${hora}</span></div>
+          ${data.escuela?`<div style="margin-bottom:6px;"><span class="badge badge-yellow">🏫 ${esc(data.escuela)}</span></div>`:''}
+          <div class="novedad-text">${esc(data.texto)}</div>
+        </div>`;
+      }).join('');
+    });
+  }catch(e){container.innerHTML=`<div class="empty-state"><div class="icon">⚠️</div><p>Error al cargar.</p></div>`;}
+}
+
+function openNovModal(){
+  if(!selectedDate)return;
+  const[y,m,d]=selectedDate.split('-');
+  document.getElementById('novModalSub').textContent=`${parseInt(d)} de ${MESES[parseInt(m)-1]} · ${y}`;
+  document.getElementById('novTexto').value='';document.getElementById('novEscuela').value='';
+  hideAlert(document.getElementById('novAlert'));
+  document.getElementById('novModal').classList.add('visible');
+}
+function closeNovModal(){document.getElementById('novModal').classList.remove('visible');}
+
+async function saveNovedad(){
+  const texto=document.getElementById('novTexto').value.trim();
+  const alertEl=document.getElementById('novAlert');
+  if(!texto){showAlert(alertEl,'Escribí la novedad antes de guardar.');return;}
+  try{
+    const{db,collection,addDoc,serverTimestamp}=fb();
+    await addDoc(collection(db,'novedades'),{
+      fecha:selectedDate,texto,
+      escuela:document.getElementById('novEscuela').value.trim()||null,
+      autorUid:currentUser.uid,autorNombre:currentUserData?.nombre||currentUser.email,
+      creadoEn:serverTimestamp()
+    });
+    closeNovModal();daysWithNotes.add(selectedDate);renderCalendar();
+    registrarHistorial('agrego','Calendario',`Cargó una novedad el ${selectedDate}${document.getElementById('novEscuela').value.trim()?` — Escuela: ${document.getElementById('novEscuela').value.trim()}`:''}`);
+  }catch(e){showAlert(alertEl,'Error al guardar. Verificá permisos de Firebase.');}
+}
+
+// ── EVENTUALIDADES ──
+function loadEventualidades(){
+  if(unsubEv){unsubEv();unsubEv=null;}
+  const{db,collection,query,orderBy,onSnapshot}=fb();
+  const container=document.getElementById('eventualidadesContainer');
+  container.innerHTML='<div class="spinner"></div>';
+  try{
+    const q=query(collection(db,'eventualidades'),orderBy('creadoEn','desc'));
+    unsubEv=onSnapshot(q,snap=>{
+      allEventualidades=snap.docs.map(d=>({id:d.id,...d.data()}));
+      renderEventualidades(filtroEv==='todos'?allEventualidades:allEventualidades.filter(e=>e.tipo===filtroEv));
+    });
+  }catch(e){container.innerHTML=`<div class="empty-state"><div class="icon">⚠️</div><p>Error al cargar.</p></div>`;}
+}
+
+function filtrarEv(tipo){
+  filtroEv=tipo;
+  ['fevTodos','fevUrgente','fevInfo','fevSeg'].forEach(id=>{
+    const b=document.getElementById(id);if(b)b.classList.remove('active');
+  });
+  const map={todos:'fevTodos',urgente:'fevUrgente',informacion:'fevInfo',seguimiento:'fevSeg'};
+  const ab=document.getElementById(map[tipo]);if(ab)ab.classList.add('active');
+  renderEventualidades(tipo==='todos'?allEventualidades:allEventualidades.filter(e=>e.tipo===tipo));
+}
+
+function renderEventualidades(list){
+  const container=document.getElementById('eventualidadesContainer');
+  if(!list.length){container.innerHTML=`<div class="empty-state"><div class="icon">✅</div><p>Sin eventualidades registradas.</p></div>`;return;}
+  const cfg={urgente:{cls:'tag-urgente',label:'🔴 Urgente'},informacion:{cls:'tag-informacion',label:'🟣 Novedades'},seguimiento:{cls:'tag-seguimiento',label:'🟡 Seguimiento'}};
+  container.innerHTML=list.map(e=>{
+    const c=cfg[e.tipo]||cfg.seguimiento;
+    const fecha=e.creadoEn?.toDate?.()?.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'})||'';
+    const hora=e.creadoEn?.toDate?.()?.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})||'';
+    return`<div class="event-item">
+      <span class="event-tag ${c.cls}">${c.label}</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:12px;font-weight:600;color:var(--purple);">👤 ${esc(e.autorNombre||'Anónimo')}</span>
+        <span style="font-size:11px;color:var(--text3);">${fecha} ${hora}</span>
+      </div>
+      ${e.escuela?`<div style="margin-bottom:6px;"><span class="badge badge-yellow">🏫 ${esc(e.escuela)}</span></div>`:''}
+      <div class="novedad-text">${esc(e.texto)}</div>
+    </div>`;
+  }).join('');
+}
+
+function openEventModal(){
+  document.getElementById('eventTexto').value='';document.getElementById('eventEscuela').value='';
+  document.getElementById('eventTipo').value='seguimiento';
+  hideAlert(document.getElementById('eventAlert'));
+  document.getElementById('eventModal').classList.add('visible');
+}
+function closeEventModal(){document.getElementById('eventModal').classList.remove('visible');}
+
+async function saveEventualidad(){
+  const texto=document.getElementById('eventTexto').value.trim();
+  const alertEl=document.getElementById('eventAlert');
+  if(!texto){showAlert(alertEl,'Describí la eventualidad antes de guardar.');return;}
+  try{
+    const{db,collection,addDoc,serverTimestamp}=fb();
+    await addDoc(collection(db,'eventualidades'),{
+      tipo:document.getElementById('eventTipo').value,
+      escuela:document.getElementById('eventEscuela').value.trim()||null,
+      texto,autorUid:currentUser.uid,
+      autorNombre:currentUserData?.nombre||currentUser.email,
+      creadoEn:serverTimestamp()
+    });
+    closeEventModal();
+    registrarHistorial('agrego','Eventualidades',`Cargó una eventualidad tipo "${document.getElementById('eventTipo').value}"${document.getElementById('eventEscuela').value.trim()?` — Escuela: ${document.getElementById('eventEscuela').value.trim()}`:''}`);
+  }catch(e){showAlert(alertEl,'Error al guardar. Verificá permisos de Firebase.');}
+}
+
+// ── ESCUELAS ──
+async function loadEscuelas(){
+  try{
+    const{db,collection,getDocs,query,orderBy}=fb();
+    const q=query(collection(db,'escuelas'),orderBy('nombre'));
+    const snaps=await getDocs(q);
+    allEscuelas=snaps.docs.map(d=>({id:d.id,...d.data()}));
+    renderStats();filterEscuelas();
+  }catch(e){document.getElementById('escuelasContainer').innerHTML=`<div class="empty-state"><div class="icon">⚠️</div><p>Error al cargar escuelas.</p></div>`;}
+}
+
+function renderStats(){
+  const total=allEscuelas.length;
+  const visitadas=allEscuelas.filter(e=>e.estado==='visitada').length;
+  const pendientes=allEscuelas.filter(e=>e.estado==='pendiente').length;
+  document.getElementById('escuelasStats').innerHTML=`
+    <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">Total escuelas</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--accent2)">${visitadas}</div><div class="stat-label">Visitadas</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--accent3)">${pendientes}</div><div class="stat-label">Pendientes</div></div>`;
+}
+
+function setFiltroEsc(f){
+  filtroEscuela=f;
+  ['fescTodas','fescPend','fescVisit','fescProg'].forEach(id=>{const b=document.getElementById(id);if(b)b.classList.remove('active');});
+  const map={todas:'fescTodas',pendiente:'fescPend',visitada:'fescVisit',programada:'fescProg'};
+  const ab=document.getElementById(map[f]);if(ab)ab.classList.add('active');
+  filterEscuelas();
+}
+
+function filterEscuelas(){
+  const q=document.getElementById('escuelaSearch').value.toLowerCase();
+  let list=allEscuelas;
+  if(filtroEscuela!=='todas')list=list.filter(e=>e.estado===filtroEscuela);
+  if(q)list=list.filter(e=>e.nombre?.toLowerCase().includes(q)||e.directivo?.toLowerCase().includes(q)||e.mail?.toLowerCase().includes(q));
+  renderEscuelas(list);
+}
+
+function renderEscuelas(list){
+  const container=document.getElementById('escuelasContainer');
+  if(!list.length){container.innerHTML=`<div class="empty-state"><div class="icon">🏫</div><p>No hay escuelas para mostrar.</p></div>`;return;}
+  const eBadge={pendiente:'badge-blue',visitada:'badge-green',programada:'badge-yellow'};
+  const eLabel={pendiente:'⏳ Pendiente',visitada:'✅ Visitada',programada:'📅 Programada'};
+  container.innerHTML=list.map(e=>`
+    <div class="escuela-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+        <div class="escuela-name">${esc(e.nombre)}</div>
+        <span class="badge ${eBadge[e.estado]||'badge-blue'}">${eLabel[e.estado]||e.estado||''}</span>
+      </div>
+      <div class="escuela-info">
+        ${e.directivo?`<div class="escuela-row"><span class="icon">👤</span>${esc(e.directivo)}</div>`:''}
+        ${e.telefono?`<div class="escuela-row"><span class="icon">📞</span><a href="tel:${esc(e.telefono)}" style="color:var(--text2);text-decoration:none;">${esc(e.telefono)}</a></div>`:''}
+        ${e.mail?`<div class="escuela-row"><span class="icon">✉️</span><a href="mailto:${esc(e.mail)}" style="color:var(--accent);text-decoration:none;">${esc(e.mail)}</a></div>`:''}
+        ${e.direccion?`<div class="escuela-row"><span class="icon">📍</span>${esc(e.direccion)}</div>`:''}
+        ${e.alumnos?`<div class="escuela-row"><span class="icon">👶</span>${esc(e.alumnos)} alumnos (4-6 años)</div>`:''}
+        ${e.fechaVisita?`<div class="escuela-row"><span class="icon">📅</span>Visita: ${esc(e.fechaVisita)}</div>`:''}
+        ${e.observaciones?`<div class="escuela-row"><span class="icon">📝</span><span>${esc(e.observaciones)}</span></div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function openEscuelaModal(){
+  ['escNombre','escDirectivo','escTelefono','escMail','escDireccion','escAlumnos','escFechaVisita','escObservaciones'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('escEstado').value='pendiente';
+  hideAlert(document.getElementById('escAlert'));
+  document.getElementById('escuelaModal').classList.add('visible');
+}
+function closeEscuelaModal(){document.getElementById('escuelaModal').classList.remove('visible');}
+
+async function saveEscuela(){
+  const nombre=document.getElementById('escNombre').value.trim();
+  const alertEl=document.getElementById('escAlert');
+  if(!nombre){showAlert(alertEl,'El nombre es obligatorio.');return;}
+  try{
+    const{db,collection,addDoc,serverTimestamp}=fb();
+    await addDoc(collection(db,'escuelas'),{
+      nombre,
+      directivo:document.getElementById('escDirectivo').value.trim()||null,
+      telefono:document.getElementById('escTelefono').value.trim()||null,
+      mail:document.getElementById('escMail').value.trim()||null,
+      direccion:document.getElementById('escDireccion').value.trim()||null,
+      alumnos:document.getElementById('escAlumnos').value.trim()||null,
+      estado:document.getElementById('escEstado').value,
+      fechaVisita:document.getElementById('escFechaVisita').value||null,
+      observaciones:document.getElementById('escObservaciones').value.trim()||null,
+      creadoEn:serverTimestamp()
+    });
+    closeEscuelaModal();await loadEscuelas();
+    registrarHistorial('agrego','Escuelas',`Agregó la escuela "${nombre}"`);
+  }catch(e){showAlert(alertEl,'Error al guardar. Verificá permisos de Firebase.');}
+}
+
+// ── EXPORTAR PDF ──
+function exportarPDF(){
+  if(!allEscuelas.length){alert('No hay escuelas para exportar.');return;}
+  const{jsPDF}=window.jspdf;
+  const pdfdoc=new jsPDF({orientation:'landscape'});
+
+  pdfdoc.setFillColor(10,15,30);
+  pdfdoc.rect(0,0,297,30,'F');
+  pdfdoc.setTextColor(0,212,255);
+  pdfdoc.setFontSize(16);pdfdoc.setFont('helvetica','bold');
+  pdfdoc.text('PROGRAMA VISUAL 511 — ESCUELAS TRELEW',14,13);
+  pdfdoc.setFontSize(9);pdfdoc.setTextColor(148,163,184);
+  pdfdoc.text('Prevención y Detección de Patologías Visuales · 4 a 6 años',14,21);
+  pdfdoc.setTextColor(255,255,255);
+  pdfdoc.text(`Generado: ${new Date().toLocaleDateString('es-AR')} | Total: ${allEscuelas.length} | Visitadas: ${allEscuelas.filter(e=>e.estado==='visitada').length} | Pendientes: ${allEscuelas.filter(e=>e.estado==='pendiente').length}`,180,21);
+
+  const eLabel={pendiente:'Pendiente',visitada:'Visitada',programada:'Programada'};
+  const rows=allEscuelas.map((e,i)=>[
+    i+1, e.nombre||'', e.directivo||'-', e.telefono||'-', e.mail||'-',
+    e.alumnos||'-', eLabel[e.estado]||'-', e.fechaVisita||'-', e.observaciones||'-'
+  ]);
+
+  pdfdoc.autoTable({
+    startY:34,
+    head:[['#','Escuela','Directivo','Teléfono','Mail','Alumnos','Estado','Fecha Visita','Observaciones']],
+    body:rows,
+    theme:'grid',
+    headStyles:{fillColor:[0,80,120],textColor:[255,255,255],fontStyle:'bold',fontSize:8},
+    bodyStyles:{fontSize:7,textColor:[20,20,20]},
+    alternateRowStyles:{fillColor:[240,248,255]},
+    columnStyles:{0:{cellWidth:8},1:{cellWidth:40},2:{cellWidth:30},3:{cellWidth:24},4:{cellWidth:40},5:{cellWidth:14},6:{cellWidth:22},7:{cellWidth:22},8:{cellWidth:50}},
+    margin:{left:7,right:7}
+  });
+
+  const pageCount=pdfdoc.internal.getNumberOfPages();
+  for(let i=1;i<=pageCount;i++){
+    pdfdoc.setPage(i);
+    pdfdoc.setFontSize(7);pdfdoc.setTextColor(148,163,184);
+    pdfdoc.text(`Escuela 511 — Programa Visual Trelew | Página ${i} de ${pageCount}`,14,pdfdoc.internal.pageSize.height-5);
+  }
+  pdfdoc.save(`escuelas_visual511_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+// ── PERSONAL ──
+async function loadPersonal(){
+  try{
+    const{db,collection,getDocs}=fb();
+    const snaps=await getDocs(collection(db,'personal'));
+    const container=document.getElementById('personalContainer');
+    if(snaps.empty){
+      container.innerHTML=`<div class="empty-state"><div class="icon">👥</div><p>No hay personal registrado.</p><br><p style="font-size:12px;color:var(--text3)">Creá usuarios en Firebase Auth<br>y documentos en la colección <b>personal</b>.</p></div>`;return;
+    }
+    container.innerHTML=snaps.docs.map(d=>{
+      const u=d.data();
+      return`<div class="card" style="display:flex;align-items:center;gap:14px;">
+        <div style="width:44px;height:44px;background:linear-gradient(135deg,var(--accent),#0070ff);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">👤</div>
+        <div><div style="font-weight:600;font-size:15px;">${esc(u.nombre||'Sin nombre')}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px;">${esc(u.rol||'Personal')}</div>
+        ${u.mail?`<div style="font-size:12px;color:var(--accent);">${esc(u.mail)}</div>`:''}</div>
+      </div>`;
+    }).join('');
+  }catch(e){document.getElementById('personalContainer').innerHTML=`<div class="empty-state"><div class="icon">⚠️</div><p>Error al cargar personal.</p></div>`;}
+}
+
+// ── HELPERS ──
+function dateToKey(y,m,d){return`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showAlert(el,msg){el.textContent=msg;el.classList.add('visible');}
+function hideAlert(el){el.classList.remove('visible');}
+
+document.querySelectorAll('.modal-overlay').forEach(overlay=>{
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('visible');});
+});
+</script>
+</body>
+</html>
